@@ -4,20 +4,20 @@ import javax.naming.*;
 import java.util.*;
 
 public
-class EfficientSplitList<T extends Comparable<T>> implements List<T>{
-    private final Class<T> cl;
+class EfficientSplitList<E extends Comparable<E>> extends AbstractSet<E> {
+    private final Class<E> cl;
     private final SplittableRandom randomLevelGenerator;
 
     // If you change this number, you also need to change the random function.
-    private static final int MAX = 5;
+    private static final int MAX = 31;
 
     private int size;
 
-    private Node<T> head = null;
+    private Node<E> head = null;
 
 
     public
-    EfficientSplitList(Class<T> cl) {
+    EfficientSplitList(Class<E> cl) {
         this.cl = cl;
         randomLevelGenerator = new SplittableRandom();
     }
@@ -28,20 +28,21 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
         return randomLevelGenerator.nextInt(MAX) + 1;
     }
 
+    @Override
     public
-    boolean add(T value) {
+    boolean add(E e) {
         // First element in list
         if (head == null) {
-            head = new Node<>(MAX, value);
+            head = new Node<>(MAX, e);
 
             size++;
             return true;
         }
 
         int level = getRandomLevel();
-        Node<T> node = new Node<>(level, value);
+        Node<E> node = new Node<>(level, e);
 
-        Node<T> prev = head;
+        Node<E> prev = head;
 
         // If new node is before head, swap values
         if (head.data.compareTo(node.data) > 0) {
@@ -49,7 +50,7 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
         }
 
         for (int currentLevel = MAX; currentLevel >= 0; currentLevel--) {
-            Node<T> next = prev.getNext(currentLevel);
+            Node<E> next = prev.getNext(currentLevel);
 
             while (next != null) {
                 int comparison = next.data.compareTo(node.data);
@@ -78,109 +79,29 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
     }
 
     @Override
-    public boolean remove(Object o) {
-        return false;
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-        for (Object value : c) {
-            if (!contains(value)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    @Override
-    public boolean addAll(Collection<? extends T> c) {
-        return false;
-    }
-
-    @Override
-    public boolean addAll(int index, Collection<? extends T> c) {
-        return false;
-    }
-
-    @Override
-    public boolean removeAll(Collection<?> c) {
-        return false;
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        return false;
-    }
-
-    public
-    boolean addAll(Collection<T> values) {
-        boolean success = true;
-        for (T value : values) {
-            success &= add(value);
-        }
-
-        return success;
-    }
-
     public
     void clear() {
         head = null;
     }
 
     @Override
-    public T get(int index) {
-        return null;
-    }
-
-    @Override
-    public T set(int index, T element) {
-        return null;
-    }
-
-    @Override
-    public void add(int index, T element) {
-
-    }
-
-    @Override
-    public T remove(int index) {
-        return new OperationNotSupportedException();
-    }
-
-    @Override
-    public int indexOf(Object o) {
-        return 0;
-    }
-
-    @Override
-    public int lastIndexOf(Object o) {
-        return 0;
-    }
-
-    public
-    boolean isEmpty() {
-        return size == 0;
-    }
-
-    @Override
     public boolean contains(Object o) {
-        T value = cl.cast(o);
+        E e = cl.cast(o);
 
         if (head == null) {
             return false;
         }
-        if (head.data.compareTo(value) == 0) {
+        if (head.data.compareTo(e) == 0) {
             return true;
         }
 
-        Node<T> prev = head;
+        Node<E> prev = head;
 
         for (int currentLevel = MAX; currentLevel >= 0; currentLevel--) {
-            Node<T> next = prev.getNext(currentLevel);
+            Node<E> next = prev.getNext(currentLevel);
 
             while (next != null) {
-                int comparision = next.data.compareTo(value);
+                int comparision = next.data.compareTo(e);
 
                 if (comparision == 0) {
                     return true;
@@ -198,47 +119,32 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
         return false;
     }
 
+    @Override
     public
-    Iterator<T> iterator() {
+    boolean isEmpty() {
+        return size == 0;
+    }
+
+    @Override
+    public
+    Iterator<E> iterator() {
         return new SkipListIterator<>(this);
     }
 
     @Override
-    public Object[] toArray() {
-        return new Object[0];
-    }
-
-    @Override
-    public <T1> T1[] toArray(T1[] a) {
-        return null;
-    }
-
     public
-    ListIterator<T> listIterator() {
-        return new SkipListIterator<>(this);
-    }
+    boolean remove(Object o) {
+        E e = cl.cast(o);
 
-    @Override
-    public ListIterator<T> listIterator(int index) {
-        return null;
-    }
-
-    @Override
-    public List<T> subList(int fromIndex, int toIndex) {
-        return null;
-    }
-
-    public
-    boolean remove(T value) {
         if (head == null) {
             return false;
         }
 
-        Node<T> node = null;
+        Node<E> node = null;
         int level = MAX;
 
-        if (head.data.compareTo(value) == 0) {
-            Node<T> next = head.getNext(0);
+        if (head.data.compareTo(e) == 0) {
+            Node<E> next = head.getNext(0);
 
             if (next != null) {
                 swapNode(head, next);
@@ -247,7 +153,7 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
 
                 for (int i = 0; i <= node.getLevel(); i++) {
                     next = node.getNext(i);
-                    if (next != null || node.data == value) {
+                    if (next != null || node.data == e) {
                         head.setNext(i, next);
                     }
                 }
@@ -257,13 +163,13 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
             }
         }
         else {
-            Node<T> prev = head;
+            Node<E> prev = head;
             search:
             for (; level >= 0; level--) {
-                Node<T> next = prev.getNext(level);
+                Node<E> next = prev.getNext(level);
 
                 while (next != null) {
-                    int comparision = next.data.compareTo(value);
+                    int comparision = next.data.compareTo(e);
 
                     if (comparision == 0) {
                         node = next;
@@ -285,11 +191,11 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
             }
 
             for (int i = level; i >= 0; i--) {
-                Node<T> next = node.getNext(i);
+                Node<E> next = node.getNext(i);
                 prev.setNext(i, next);
                 if (i > 0) {
-                    Node<T> temp = prev.getNext(i - 1);
-                    while (temp != null && temp.data.compareTo(value) != 0) {
+                    Node<E> temp = prev.getNext(i - 1);
+                    while (temp != null && temp.data.compareTo(e) != 0) {
                         prev = temp;
                         temp = temp.getNext(i - 1);
                     }
@@ -301,28 +207,18 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
         return true;
     }
 
-    public
-    boolean removeAll(Collection<T> values) {
-        boolean success = true;
-        for (T value : values) {
-            success &= remove(value);
-        }
-
-        return success;
-    }
-
+    @Override
     public
     int size() {
         return size;
     }
-
 
     @Override
     public
     String toString() {
         StringBuilder builder = new StringBuilder();
         builder.append("size=").append(size).append("\n");
-        Node<T> node = head;
+        Node<E> node = head;
         if (node!=null) {
             int iLevel = node.getLevel();
             for (int i=iLevel; i>=0; i--) {
@@ -330,7 +226,7 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
                 node = head;
                 while (node != null) {
                     builder.append(node.data);
-                    Node<T> next = node.getNext(i);
+                    Node<E> next = node.getNext(i);
                     if (next != null)
                         builder.append("->");
                     node = next;
@@ -342,8 +238,8 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
         return builder.toString();
     }
 
-    private void swapNode(Node<T> first, Node<T> second) {
-        T value = first.data;
+    private void swapNode(Node<E> first, Node<E> second) {
+        E value = first.data;
         first.data = second.data;
         second.data = value;
     }
@@ -576,8 +472,8 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
 
         int level = MAX;
         for (int i = level; i >= 0; i--) {
-            Node<T> prev = head;
-            Node<T> node = prev.getNext(i);
+            Node<E> prev = head;
+            Node<E> node = prev.getNext(i);
             while (node != null) {
                 // The list should be ordered
                 if (node.data.compareTo(prev.data) < 1)
@@ -590,35 +486,27 @@ class EfficientSplitList<T extends Comparable<T>> implements List<T>{
     }
 
     public static void main(String args[]) {
-        for (int i = 0; i < 5000; i++) {
+        for (int i = 0; i < 1; i++) {
             EfficientSplitList<Integer> list = new EfficientSplitList<>(Integer.class);
-            list.add(2);
-            list.add(5);
-            list.add(1);
-            list.add(32);
-            list.add(3);
-            list.add(6);
-            list.add(4);
+            Collection<Integer> set = new HashSet<>();
+
+            SplittableRandom random = new SplittableRandom();
+            for (int x = 0; x < 500; x++) {
+                set.add(random.nextInt());
+            }
+
+            list.addAll(set);
+
             if (!list.validate()) {
                 System.out.println(list.toString());
                 continue;
             }
 
-            list.remove(3);
-            if (!list.validate()) {
-                System.out.println(list.toString());
-                continue;
-            }
-            list.remove(1);
-            if (!list.validate()) {
-                System.out.println(list.toString());
-                continue;
-            }
-            list.remove(32);
+            list.removeAll(set);
+
             if (!list.validate()) {
                 System.out.println(list.toString());
             }
-//            System.out.println(list.toString());
         }
 
     }
