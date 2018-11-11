@@ -1,9 +1,11 @@
 package com.ajr;
 
+import javax.naming.*;
 import java.util.*;
 
 public
-class EfficientSplitList<T extends Comparable<T>> {
+class EfficientSplitList<T extends Comparable<T>> implements List<T>{
+    private final Class<T> cl;
     private final SplittableRandom randomLevelGenerator;
 
     // If you change this number, you also need to change the random function.
@@ -15,7 +17,8 @@ class EfficientSplitList<T extends Comparable<T>> {
 
 
     public
-    EfficientSplitList() {
+    EfficientSplitList(Class<T> cl) {
+        this.cl = cl;
         randomLevelGenerator = new SplittableRandom();
     }
 
@@ -74,6 +77,42 @@ class EfficientSplitList<T extends Comparable<T>> {
         return true;
     }
 
+    @Override
+    public boolean remove(Object o) {
+        return false;
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+        for (Object value : c) {
+            if (!contains(value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends T> c) {
+        return false;
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<? extends T> c) {
+        return false;
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> c) {
+        return false;
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> c) {
+        return false;
+    }
+
     public
     boolean addAll(Collection<T> values) {
         boolean success = true;
@@ -89,8 +128,45 @@ class EfficientSplitList<T extends Comparable<T>> {
         head = null;
     }
 
+    @Override
+    public T get(int index) {
+        return null;
+    }
+
+    @Override
+    public T set(int index, T element) {
+        return null;
+    }
+
+    @Override
+    public void add(int index, T element) {
+
+    }
+
+    @Override
+    public T remove(int index) {
+        return new OperationNotSupportedException();
+    }
+
+    @Override
+    public int indexOf(Object o) {
+        return 0;
+    }
+
+    @Override
+    public int lastIndexOf(Object o) {
+        return 0;
+    }
+
     public
-    boolean contains(T value) {
+    boolean isEmpty() {
+        return size == 0;
+    }
+
+    @Override
+    public boolean contains(Object o) {
+        T value = cl.cast(o);
+
         if (head == null) {
             return false;
         }
@@ -123,30 +199,33 @@ class EfficientSplitList<T extends Comparable<T>> {
     }
 
     public
-    boolean containsAll(Collection<T> values) {
-        for (T value : values) {
-            if (!contains(value)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-
-    public
-    boolean isEmpty() {
-        return size == 0;
-    }
-
-    public
     Iterator<T> iterator() {
         return new SkipListIterator<>(this);
+    }
+
+    @Override
+    public Object[] toArray() {
+        return new Object[0];
+    }
+
+    @Override
+    public <T1> T1[] toArray(T1[] a) {
+        return null;
     }
 
     public
     ListIterator<T> listIterator() {
         return new SkipListIterator<>(this);
+    }
+
+    @Override
+    public ListIterator<T> listIterator(int index) {
+        return null;
+    }
+
+    @Override
+    public List<T> subList(int fromIndex, int toIndex) {
+        return null;
     }
 
     public
@@ -156,16 +235,31 @@ class EfficientSplitList<T extends Comparable<T>> {
         }
 
         Node<T> node = null;
-        Node<T> prev = null;
         int level = MAX;
 
         if (head.data.compareTo(value) == 0) {
-            node = head;
+            Node<T> next = head.getNext(0);
+
+            if (next != null) {
+                swapNode(head, next);
+
+                node = next;    //node is the old head that needs to be removed
+
+                for (int i = 0; i <= node.getLevel(); i++) {
+                    next = node.getNext(i);
+                    if (next != null || node.data == value) {
+                        head.setNext(i, next);
+                    }
+                }
+            }
+            else {
+                head = null;
+            }
         }
         else {
-            prev = head;
+            Node<T> prev = head;
             search:
-            for (;level >= 0; level--) {
+            for (; level >= 0; level--) {
                 Node<T> next = prev.getNext(level);
 
                 while (next != null) {
@@ -184,42 +278,20 @@ class EfficientSplitList<T extends Comparable<T>> {
                     next = prev.getNext(level);
                 }
             }
-        }
 
-        // Can't delete value that was not found
-        if (node == null) {
-            return false;
-        }
-
-        Node<T> next;
-
-        // Only head will have prev == null;
-        if (prev == null) {
-            next = node.getNext(0);
-
-            if (next != null) {
-                // If there is something next, swap the nodes.
-                swapNode(node, next);
-
-                prev = node;
-                node = next;
+            // Can't delete value that was not found
+            if (node == null) {
+                return false;
             }
-            else {
-                // If there isn't something next, the head is empry.
-                head = null;
-            }
-        }
 
-        for (int i = level; i >= 0; i--) {
-            System.out.println(toString());
-            next = node.getNext(i);
-            if (prev != null) {
+            for (int i = level; i >= 0; i--) {
+                Node<T> next = node.getNext(i);
                 prev.setNext(i, next);
                 if (i > 0) {
-                    Node<T> temp = prev.getNext(i -1);
+                    Node<T> temp = prev.getNext(i - 1);
                     while (temp != null && temp.data.compareTo(value) != 0) {
                         prev = temp;
-                        temp = temp.getNext(i-1);
+                        temp = temp.getNext(i - 1);
                     }
                 }
             }
@@ -227,6 +299,21 @@ class EfficientSplitList<T extends Comparable<T>> {
 
         size--;
         return true;
+    }
+
+    public
+    boolean removeAll(Collection<T> values) {
+        boolean success = true;
+        for (T value : values) {
+            success &= remove(value);
+        }
+
+        return success;
+    }
+
+    public
+    int size() {
+        return size;
     }
 
 
@@ -272,11 +359,11 @@ class EfficientSplitList<T extends Comparable<T>> {
             this.data = data;
         }
 
-        protected int getLevel() {
+        int getLevel() {
             return next.length - 1;
         }
 
-        protected void setNext(int level, Node<T> node) {
+        void setNext(int level, Node<T> node) {
             this.next[level] = node;
         }
         protected Node<T> getNext(int level) {
@@ -484,23 +571,55 @@ class EfficientSplitList<T extends Comparable<T>> {
         }
     }
 
+    private boolean validate() {
+        if (head == null) return true;
+
+        int level = MAX;
+        for (int i = level; i >= 0; i--) {
+            Node<T> prev = head;
+            Node<T> node = prev.getNext(i);
+            while (node != null) {
+                // The list should be ordered
+                if (node.data.compareTo(prev.data) < 1)
+                    return false;
+                prev = node;
+                node = prev.getNext(i);
+            }
+        }
+        return true;
+    }
+
     public static void main(String args[]) {
-        EfficientSplitList<Integer> list = new EfficientSplitList<>();
-        System.out.println(list.toString());
-        list.add(2);
-        list.add(5);
-        list.add(1);
-        list.add(32);
-        list.add(3);
-        list.add(6);
-        list.add(4);
-        System.out.println(list.toString());
-        list.remove(3);
-        System.out.println(list.toString());
-        list.remove(1);
-        System.out.println(list.toString());
-        list.remove(32);
-        System.out.println(list.toString());
+        for (int i = 0; i < 5000; i++) {
+            EfficientSplitList<Integer> list = new EfficientSplitList<>(Integer.class);
+            list.add(2);
+            list.add(5);
+            list.add(1);
+            list.add(32);
+            list.add(3);
+            list.add(6);
+            list.add(4);
+            if (!list.validate()) {
+                System.out.println(list.toString());
+                continue;
+            }
+
+            list.remove(3);
+            if (!list.validate()) {
+                System.out.println(list.toString());
+                continue;
+            }
+            list.remove(1);
+            if (!list.validate()) {
+                System.out.println(list.toString());
+                continue;
+            }
+            list.remove(32);
+            if (!list.validate()) {
+                System.out.println(list.toString());
+            }
+//            System.out.println(list.toString());
+        }
 
     }
 }
